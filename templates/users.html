@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>User List</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='users.css') }}">
+</head>
+<body>
+    <h1>User List</h1>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                    <div class="flash-message">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <form action="{{ url_for('display') }}" method="get" class="search-form">
+        <input type="text" name="search" placeholder="Search by ID or Phone Number" value="{{ search_query }}">
+        <button type="submit">Search</button>
+    </form>
+    
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Surname</th>
+            <th>Phone</th>
+            <th>Number</th>
+            <th>Time</th>
+            <th>Actions asdasd</th>
+        </tr>
+        {% for user in users %}
+            <tr>
+                <td>{{ user.ID }}</td>
+                <td>{{ user.NAME }}</td>
+                <td>{{ user.SURNAME }}</td>
+                <td>{{ user.PHONE }}</td>
+                <td>{{ user.NUMBER }}</td>
+                <td>{{ user.TIME.strftime('%d/%m %H:%M') }}</td>
+
+                <td>
+                    <form action="{{ url_for('delete_user', id=user.user_id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this user?')">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="delete-button">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
