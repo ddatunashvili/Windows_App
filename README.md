@@ -21,7 +21,7 @@ application has an id and phone validation as well as  a user management panel w
 
 ## To Run
 
-* run runner.bat 
+* run runner.bat which is in **scripts** folder
 
 
 
