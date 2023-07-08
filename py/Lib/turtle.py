@@ -38,7 +38,7 @@ pictures can easily be drawn.
 ----- turtle.py
 
 This module is an extended reimplementation of turtle.py from the
-Python standard distribution up to Python 2.5. (See: https://www.python.org)
+Python standard distribution up to Python 2.5. (See: http://www.python.org)
 
 It tries to keep the merits of turtle.py and to be (nearly) 100%
 compatible with it. This means in the first place to enable the
@@ -2877,8 +2877,7 @@ class RawTurtle(TPen, TNavigator):
         between the orientation of the turtleshape and the heading of the
         turtle (its direction of movement).
 
-        (Incorrectly marked as deprecated since Python 3.1, it is really
-        settiltangle that is deprecated.)
+        Deprecated since Python 3.1
 
         Examples (for a Turtle instance named turtle):
         >>> turtle.shape("circle")

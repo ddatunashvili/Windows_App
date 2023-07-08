@@ -8,7 +8,8 @@
 # Licensed to PSF under a Contributor Agreement.
 #
 
-__all__ = [ 'BaseManager', 'SyncManager', 'BaseProxy', 'Token' ]
+__all__ = [ 'BaseManager', 'SyncManager', 'BaseProxy', 'Token',
+            'SharedMemoryManager' ]
 
 #
 # Imports
@@ -34,11 +35,9 @@ from . import util
 from . import get_context
 try:
     from . import shared_memory
+    HAS_SHMEM = True
 except ImportError:
     HAS_SHMEM = False
-else:
-    HAS_SHMEM = True
-    __all__.append('SharedMemoryManager')
 
 #
 # Register some things for pickling
@@ -669,7 +668,7 @@ class BaseManager(object):
                 if hasattr(process, 'terminate'):
                     util.info('trying to `terminate()` manager process')
                     process.terminate()
-                    process.join(timeout=1.0)
+                    process.join(timeout=0.1)
                     if process.is_alive():
                         util.info('manager still alive after terminate')
 
@@ -960,7 +959,7 @@ def MakeProxyType(name, exposed, _cache={}):
 
 
 def AutoProxy(token, serializer, manager=None, authkey=None,
-              exposed=None, incref=True, manager_owned=False):
+              exposed=None, incref=True):
     '''
     Return an auto-proxy for `token`
     '''
@@ -980,7 +979,7 @@ def AutoProxy(token, serializer, manager=None, authkey=None,
 
     ProxyType = MakeProxyType('AutoProxy[%s]' % token.typeid, exposed)
     proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,
-                      incref=incref, manager_owned=manager_owned)
+                      incref=incref)
     proxy._isauto = True
     return proxy
 

@@ -280,7 +280,6 @@ def _syscmd_ver(system='', release='', version='',
     for cmd in ('ver', 'command /c ver', 'cmd /c ver'):
         try:
             info = subprocess.check_output(cmd,
-                                           stdin=subprocess.DEVNULL,
                                            stderr=subprocess.DEVNULL,
                                            text=True,
                                            shell=True)
@@ -411,12 +410,7 @@ def win32_ver(release='', version='', csd='', ptype=''):
 def _mac_ver_xml():
     fn = '/System/Library/CoreServices/SystemVersion.plist'
     if not os.path.exists(fn):
-        if 'SDKROOT' in os.environ:
-            fn = os.environ['SDKROOT'] + fn
-            if not os.path.exists(fn):
-                return None
-        else:
-            return None
+        return None
 
     try:
         import plistlib

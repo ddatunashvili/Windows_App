@@ -135,23 +135,25 @@ class MimeTypes:
                 type = 'text/plain'
             return type, None           # never compressed, so encoding is None
         base, ext = posixpath.splitext(url)
-        while (ext_lower := ext.lower()) in self.suffix_map:
-            base, ext = posixpath.splitext(base + self.suffix_map[ext_lower])
-        # encodings_map is case sensitive
+        while ext in self.suffix_map:
+            base, ext = posixpath.splitext(base + self.suffix_map[ext])
         if ext in self.encodings_map:
             encoding = self.encodings_map[ext]
             base, ext = posixpath.splitext(base)
         else:
             encoding = None
-        ext = ext.lower()
         types_map = self.types_map[True]
         if ext in types_map:
             return types_map[ext], encoding
+        elif ext.lower() in types_map:
+            return types_map[ext.lower()], encoding
         elif strict:
             return None, encoding
         types_map = self.types_map[False]
         if ext in types_map:
             return types_map[ext], encoding
+        elif ext.lower() in types_map:
+            return types_map[ext.lower()], encoding
         else:
             return None, encoding
 
@@ -167,7 +169,7 @@ class MimeTypes:
         but non-standard types.
         """
         type = type.lower()
-        extensions = list(self.types_map_inv[True].get(type, []))
+        extensions = self.types_map_inv[True].get(type, [])
         if not strict:
             for ext in self.types_map_inv[False].get(type, []):
                 if ext not in extensions:

@@ -18,10 +18,9 @@ Functions:
                           seconds past the Epoch (the time values
                           returned from time.time())
 
-  get_server_certificate (addr, ssl_version, ca_certs, timeout) -- Retrieve the
-                          certificate from the server at the specified
-                          address and return it as a PEM-encoded string
-
+  fetch_server_certificate (HOST, PORT) -- fetch the certificate provided
+                          by the server running on HOST at port PORT.  No
+                          validation of the certificate is performed.
 
 Integer constants:
 

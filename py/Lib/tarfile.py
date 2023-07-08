@@ -887,24 +887,15 @@ class TarInfo(object):
         # Test number fields for values that exceed the field limit or values
         # that like to be stored as float.
         for name, digits in (("uid", 8), ("gid", 8), ("size", 12), ("mtime", 12)):
-            needs_pax = False
+            if name in pax_headers:
+                # The pax header has priority. Avoid overflow.
+                info[name] = 0
+                continue
 
             val = info[name]
-            val_is_float = isinstance(val, float)
-            val_int = round(val) if val_is_float else val
-            if not 0 <= val_int < 8 ** (digits - 1):
-                # Avoid overflow.
-                info[name] = 0
-                needs_pax = True
-            elif val_is_float:
-                # Put rounded value in ustar header, and full
-                # precision value in pax header.
-                info[name] = val_int
-                needs_pax = True
-
-            # The existing pax header has priority.
-            if needs_pax and name not in pax_headers:
+            if not 0 <= val < 8 ** (digits - 1) or isinstance(val, float):
                 pax_headers[name] = str(val)
+                info[name] = 0
 
         # Create a pax extended header if necessary.
         if pax_headers:
@@ -1794,7 +1785,7 @@ class TarFile(object):
            than once in the archive, its last occurrence is assumed to be the
            most up-to-date version.
         """
-        tarinfo = self._getmember(name.rstrip('/'))
+        tarinfo = self._getmember(name)
         if tarinfo is None:
             raise KeyError("filename %r not found" % name)
         return tarinfo
@@ -2354,15 +2345,6 @@ class TarFile(object):
                     raise ReadError(str(e))
             except SubsequentHeaderError as e:
                 raise ReadError(str(e))
-            except Exception as e:
-                try:
-                    import zlib
-                    if isinstance(e, zlib.error):
-                        raise ReadError(f'zlib error: {e}')
-                    else:
-                        raise e
-                except ImportError:
-                    raise e
             break
 
         if tarinfo is not None:

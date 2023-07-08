@@ -1026,11 +1026,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         if arg:
             import shlex
             argv0 = sys.argv[0:1]
-            try:
-                sys.argv = shlex.split(arg)
-            except ValueError as e:
-                self.error('Cannot run %s: %s' % (arg, e))
-                return
+            sys.argv = shlex.split(arg)
             sys.argv[:0] = argv0
         # this is caught in the main debugger loop
         raise Restart
@@ -1493,9 +1489,6 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                 self.error('No help for %r; please do not run Python with -OO '
                            'if you need command help' % arg)
                 return
-            if command.__doc__ is None:
-                self.error('No help for %r; __doc__ string missing' % arg)
-                return
             self.message(command.__doc__.rstrip())
 
     do_h = do_help
@@ -1696,14 +1689,6 @@ def main():
     if not run_as_module and not os.path.exists(mainpyfile):
         print('Error:', mainpyfile, 'does not exist')
         sys.exit(1)
-
-    if run_as_module:
-        import runpy
-        try:
-            runpy._get_module_details(mainpyfile)
-        except Exception:
-            traceback.print_exc()
-            sys.exit(1)
 
     sys.argv[:] = args      # Hide "pdb.py" and pdb options from argument list
 

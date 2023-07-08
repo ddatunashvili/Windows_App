@@ -93,7 +93,6 @@ import email.utils
 import html
 import http.client
 import io
-import itertools
 import mimetypes
 import os
 import posixpath
@@ -104,6 +103,8 @@ import socketserver
 import sys
 import time
 import urllib.parse
+import contextlib
+from functools import partial
 
 from http import HTTPStatus
 
@@ -331,13 +332,6 @@ class BaseHTTPRequestHandler(socketserver.StreamRequestHandler):
                 return False
         self.command, self.path = command, path
 
-        # gh-87389: The purpose of replacing '//' with '/' is to protect
-        # against open redirect attacks possibly triggered if the path starts
-        # with '//' because http clients treat //path as an absolute URI
-        # without scheme (similar to http://path) rather than a path.
-        if self.path.startswith('//'):
-            self.path = '/' + self.path.lstrip('/')  # Reduce to a single /
-
         # Examine the headers and look for a Connection directive.
         try:
             self.headers = http.client.parse_headers(self.rfile,
@@ -564,11 +558,6 @@ class BaseHTTPRequestHandler(socketserver.StreamRequestHandler):
 
         self.log_message(format, *args)
 
-    # https://en.wikipedia.org/wiki/List_of_Unicode_characters#Control_codes
-    _control_char_table = str.maketrans(
-            {c: fr'\x{c:02x}' for c in itertools.chain(range(0x20), range(0x7f,0xa0))})
-    _control_char_table[ord('\\')] = r'\\'
-
     def log_message(self, format, *args):
         """Log an arbitrary message.
 
@@ -584,16 +573,12 @@ class BaseHTTPRequestHandler(socketserver.StreamRequestHandler):
         The client ip and current date/time are prefixed to
         every message.
 
-        Unicode control characters are replaced with escaped hex
-        before writing the output to stderr.
-
         """
 
-        message = format % args
         sys.stderr.write("%s - - [%s] %s\n" %
                          (self.address_string(),
                           self.log_date_time_string(),
-                          message.translate(self._control_char_table)))
+                          format%args))
 
     def version_string(self):
         """Return the server software version string."""
@@ -1255,6 +1240,7 @@ def test(HandlerClass=BaseHTTPRequestHandler,
 
     """
     ServerClass.address_family, addr = _get_best_family(bind, port)
+
     HandlerClass.protocol_version = protocol
     with ServerClass(addr, HandlerClass) as httpd:
         host, port = httpd.socket.getsockname()[:2]
@@ -1271,39 +1257,35 @@ def test(HandlerClass=BaseHTTPRequestHandler,
 
 if __name__ == '__main__':
     import argparse
-    import contextlib
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--cgi', action='store_true',
-                        help='run as CGI server')
+                       help='Run as CGI Server')
     parser.add_argument('--bind', '-b', metavar='ADDRESS',
-                        help='specify alternate bind address '
-                             '(default: all interfaces)')
+                        help='Specify alternate bind address '
+                             '[default: all interfaces]')
     parser.add_argument('--directory', '-d', default=os.getcwd(),
-                        help='specify alternate directory '
-                             '(default: current directory)')
-    parser.add_argument('port', action='store', default=8000, type=int,
+                        help='Specify alternative directory '
+                        '[default:current directory]')
+    parser.add_argument('port', action='store',
+                        default=8000, type=int,
                         nargs='?',
-                        help='specify alternate port (default: 8000)')
+                        help='Specify alternate port [default: 8000]')
     args = parser.parse_args()
     if args.cgi:
         handler_class = CGIHTTPRequestHandler
     else:
-        handler_class = SimpleHTTPRequestHandler
+        handler_class = partial(SimpleHTTPRequestHandler,
+                                directory=args.directory)
 
     # ensure dual-stack is not disabled; ref #38907
     class DualStackServer(ThreadingHTTPServer):
-
         def server_bind(self):
             # suppress exception when protocol is IPv4
             with contextlib.suppress(Exception):
                 self.socket.setsockopt(
                     socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
             return super().server_bind()
-
-        def finish_request(self, request, client_address):
-            self.RequestHandlerClass(request, client_address, self,
-                                     directory=args.directory)
 
     test(
         HandlerClass=handler_class,

@@ -35,7 +35,7 @@
 
 #---------------------------------------------------------------------
 # Licensed to PSF under a Contributor Agreement.
-# See https://www.python.org/psf/license for licensing details.
+# See http://www.python.org/psf/license for licensing details.
 #
 # ElementTree
 # Copyright (c) 1999-2008 by Fredrik Lundh.  All rights reserved.
@@ -728,11 +728,16 @@ class ElementTree:
                 encoding = "utf-8"
             else:
                 encoding = "us-ascii"
-        with _get_writer(file_or_filename, encoding) as (write, declared_encoding):
+        enc_lower = encoding.lower()
+        with _get_writer(file_or_filename, enc_lower) as write:
             if method == "xml" and (xml_declaration or
                     (xml_declaration is None and
-                     encoding.lower() != "unicode" and
-                     declared_encoding.lower() not in ("utf-8", "us-ascii"))):
+                     enc_lower not in ("utf-8", "us-ascii", "unicode"))):
+                declared_encoding = encoding
+                if enc_lower == "unicode":
+                    # Retrieve the default encoding for the xml declaration
+                    import locale
+                    declared_encoding = locale.getpreferredencoding()
                 write("<?xml version='1.0' encoding='%s'?>\n" % (
                     declared_encoding,))
             if method == "text":
@@ -757,17 +762,19 @@ def _get_writer(file_or_filename, encoding):
         write = file_or_filename.write
     except AttributeError:
         # file_or_filename is a file name
-        if encoding.lower() == "unicode":
-            encoding="utf-8"
-        with open(file_or_filename, "w", encoding=encoding,
-                  errors="xmlcharrefreplace") as file:
-            yield file.write, encoding
+        if encoding == "unicode":
+            file = open(file_or_filename, "w")
+        else:
+            file = open(file_or_filename, "w", encoding=encoding,
+                        errors="xmlcharrefreplace")
+        with file:
+            yield file.write
     else:
         # file_or_filename is a file-like object
         # encoding determines if it is a text or binary writer
-        if encoding.lower() == "unicode":
+        if encoding == "unicode":
             # use a text writer as is
-            yield write, getattr(file_or_filename, "encoding", None) or "utf-8"
+            yield write
         else:
             # wrap a binary writer with TextIOWrapper
             with contextlib.ExitStack() as stack:
@@ -798,7 +805,7 @@ def _get_writer(file_or_filename, encoding):
                 # Keep the original file open when the TextIOWrapper is
                 # destroyed
                 stack.callback(file.detach)
-                yield file.write, encoding
+                yield file.write
 
 def _namespaces(elem, default_namespace=None):
     # identify namespaces used in this tree
@@ -1241,14 +1248,8 @@ def iterparse(source, events=None, parser=None):
     # Use the internal, undocumented _parser argument for now; When the
     # parser argument of iterparse is removed, this can be killed.
     pullparser = XMLPullParser(events=events, _parser=parser)
-
-    def iterator(source):
-        close_source = False
+    def iterator():
         try:
-            if not hasattr(source, "read"):
-                source = open(source, "rb")
-                close_source = True
-            yield None
             while True:
                 yield from pullparser.read_events()
                 # load event buffer
@@ -1264,12 +1265,16 @@ def iterparse(source, events=None, parser=None):
                 source.close()
 
     class IterParseIterator(collections.abc.Iterator):
-        __next__ = iterator(source).__next__
+        __next__ = iterator().__next__
     it = IterParseIterator()
     it.root = None
     del iterator, IterParseIterator
 
-    next(it)
+    close_source = False
+    if not hasattr(source, "read"):
+        source = open(source, "rb")
+        close_source = True
+
     return it
 
 
@@ -1278,7 +1283,7 @@ class XMLPullParser:
     def __init__(self, events=None, *, _parser=None):
         # The _parser argument is for internal use only and must not be relied
         # upon in user code. It will be removed in a future release.
-        # See https://bugs.python.org/issue17741 for more details.
+        # See http://bugs.python.org/issue17741 for more details.
 
         self._events_queue = collections.deque()
         self._parser = _parser or XMLParser(target=TreeBuilder())

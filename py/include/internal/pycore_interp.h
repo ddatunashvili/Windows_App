@@ -154,8 +154,6 @@ struct _is {
     */
     PyLongObject* small_ints[_PY_NSMALLNEGINTS + _PY_NSMALLPOSINTS];
 #endif
-
-    int int_max_str_digits;
 };
 
 /* Used by _PyImport_Cleanup() */

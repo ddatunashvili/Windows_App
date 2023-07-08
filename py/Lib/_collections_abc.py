@@ -642,7 +642,6 @@ class Set(Collection):
             hx = hash(x)
             h ^= (hx ^ (hx << 16) ^ 89869747)  * 3644798167
             h &= MASK
-        h ^= (h >> 11) ^ (h >> 25)
         h = h * 69069 + 907133923
         h &= MASK
         if h > MAX:
@@ -816,7 +815,7 @@ class KeysView(MappingView, Set):
     __slots__ = ()
 
     @classmethod
-    def _from_iterable(cls, it):
+    def _from_iterable(self, it):
         return set(it)
 
     def __contains__(self, key):
@@ -834,7 +833,7 @@ class ItemsView(MappingView, Set):
     __slots__ = ()
 
     @classmethod
-    def _from_iterable(cls, it):
+    def _from_iterable(self, it):
         return set(it)
 
     def __contains__(self, item):

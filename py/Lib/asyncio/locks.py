@@ -378,7 +378,6 @@ class Semaphore(_ContextManagerMixin):
             warnings.warn("The loop argument is deprecated since Python 3.8, "
                           "and scheduled for removal in Python 3.10.",
                           DeprecationWarning, stacklevel=2)
-        self._wakeup_scheduled = False
 
     def __repr__(self):
         res = super().__repr__()
@@ -392,7 +391,6 @@ class Semaphore(_ContextManagerMixin):
             waiter = self._waiters.popleft()
             if not waiter.done():
                 waiter.set_result(None)
-                self._wakeup_scheduled = True
                 return
 
     def locked(self):
@@ -408,17 +406,16 @@ class Semaphore(_ContextManagerMixin):
         called release() to make it larger than 0, and then return
         True.
         """
-        # _wakeup_scheduled is set if *another* task is scheduled to wakeup
-        # but its acquire() is not resumed yet
-        while self._wakeup_scheduled or self._value <= 0:
+        while self._value <= 0:
             fut = self._loop.create_future()
             self._waiters.append(fut)
             try:
                 await fut
-                # reset _wakeup_scheduled *after* waiting for a future
-                self._wakeup_scheduled = False
-            except exceptions.CancelledError:
-                self._wake_up_next()
+            except:
+                # See the similar code in Queue.get.
+                fut.cancel()
+                if self._value > 0 and not fut.cancelled():
+                    self._wake_up_next()
                 raise
         self._value -= 1
         return True
